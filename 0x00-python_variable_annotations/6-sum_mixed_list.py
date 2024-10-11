@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Type-annotated function"""
 from typing import List, Union
 
 
