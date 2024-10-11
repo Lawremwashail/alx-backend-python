@@ -3,7 +3,7 @@
 from typing import Union, Tuple
 
 
-def to_kv(k: str, v: Union[str, float]) -> Tuple[str, float]:
+def to_kv(k: str, v: Union[int, float]) -> Tuple[str, float]:
     """Function that returns a tuple of a str and float """
-    a: float = v ** 2
+    a = v ** 2
     return (k, a)
