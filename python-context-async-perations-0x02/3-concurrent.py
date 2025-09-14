@@ -1,33 +1,28 @@
-#!/usr/bin/env python3
-import sqlite3
+import asyncio
+import aiosqlite
 
-class ExecuteQuery:
-    """Context manager for executing a specific query with parameters."""
+DB_NAME = "users.db"
 
-    def __init__(self, db_name, query, params=None):
-        self.db_name = db_name
-        self.query = query
-        self.params = params if params else []
-        self.connection = None
-        self.cursor = None
-        self.results = None
+async def async_fetch_users():
+    """Fetch all users asynchronously."""
+    async with aiosqlite.connect(DB_NAME) as db:
+        async with db.execute("SELECT * FROM users") as cursor:
+            return await cursor.fetchall()
 
-    def __enter__(self):
-        self.connection = sqlite3.connect(self.db_name)
-        self.cursor = self.connection.cursor()
-        self.cursor.execute(self.query, self.params)
-        self.results = self.cursor.fetchall()
-        return self.results  # directly return results
+async def async_fetch_older_users():
+    """Fetch users older than 40 asynchronously."""
+    async with aiosqlite.connect(DB_NAME) as db:
+        async with db.execute("SELECT * FROM users WHERE age > 40") as cursor:
+            return await cursor.fetchall()
 
-    def __exit__(self, exc_type, exc_value, traceback):
-        if self.cursor:
-            self.cursor.close()
-        if self.connection:
-            self.connection.close()
-
+async def fetch_concurrently():
+    """Run both queries concurrently using asyncio.gather."""
+    results = await asyncio.gather(
+        async_fetch_users(),
+        async_fetch_older_users()
+    )
+    print("All Users:", results[0])
+    print("Users older than 40:", results[1])
 
 if __name__ == "__main__":
-    query = "SELECT * FROM users WHERE age > ?"
-    params = (25,)
-    with ExecuteQuery("users.db", query, params) as results:
-        print(results)
+    asyncio.run(fetch_concurrently())
