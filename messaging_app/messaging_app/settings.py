@@ -39,8 +39,11 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     
     'rest_framework',
+    'chats',
 
 ]
+
+AUTH_USER_MODEL = 'chats.User'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
