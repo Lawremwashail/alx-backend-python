@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Unit tests for client.GithubOrgClient."""
 import unittest
-from unittest.mock import patch, PropertyMock
+from unittest.mock import patch, PropertyMock, Mock
 from parameterized import parameterized
 
 from client import GithubOrgClient
@@ -45,15 +45,22 @@ class TestGithubOrgClient(unittest.TestCase):
 
             result = client.public_repos()
 
-            # Expected repo names
             expected = ["repo1", "repo2"]
             self.assertEqual(result, expected)
 
-            # Ensure mocks were called once
             m_url.assert_called_once()
             mock_get_json.assert_called_once_with(
                 "https://api.github.com/orgs/test-org/repos"
             )
+
+    @parameterized.expand([
+        ({"license": {"key": "my_license"}}, "my_license", True),
+        ({"license": {"key": "other_license"}}, "my_license", False),
+    ])
+    def test_has_license(self, repo, license_key, expected):
+        """Test GithubOrgClient.has_license returns correct boolean."""
+        result = GithubOrgClient.has_license(repo, license_key)
+        self.assertEqual(result, expected)
 
 
 if __name__ == "__main__":
