@@ -45,10 +45,9 @@ class TestGithubOrgClient(unittest.TestCase):
             client = GithubOrgClient("test-org")
 
             result = client.public_repos()
-
             expected = ["repo1", "repo2"]
-            self.assertEqual(result, expected)
 
+            self.assertEqual(result, expected)
             m_url.assert_called_once()
             mock_get_json.assert_called_once_with(
                 "https://api.github.com/orgs/test-org/repos"
@@ -68,10 +67,10 @@ class TestGithubOrgClient(unittest.TestCase):
     {
         "org_payload": payload[0],
         "repos_payload": payload[1],
-        "expected_repos": [repo["name"] for repo in payload[1]],
+        "expected_repos": [r["name"] for r in payload[1]],
         "apache2_repos": [
-            repo["name"] for repo in payload[1]
-            if repo.get("license", {}).get("key") == "apache-2.0"
+            r["name"] for r in payload[1]
+            if r.get("license") and r["license"].get("key") == "apache-2.0"
         ],
     }
     for payload in TEST_PAYLOAD
@@ -86,12 +85,12 @@ class TestIntegrationGithubOrgClient(unittest.TestCase):
         mock_get = cls.get_patcher.start()
 
         def side_effect(url):
-            mock_resp = Mock()
+            resp = Mock()
             if url.endswith("/orgs/google"):
-                mock_resp.json.return_value = cls.org_payload
+                resp.json.return_value = cls.org_payload
             elif url.endswith("/orgs/google/repos"):
-                mock_resp.json.return_value = cls.repos_payload
-            return mock_resp
+                resp.json.return_value = cls.repos_payload
+            return resp
 
         mock_get.side_effect = side_effect
 
@@ -101,17 +100,15 @@ class TestIntegrationGithubOrgClient(unittest.TestCase):
         cls.get_patcher.stop()
 
     def test_public_repos(self):
-        """Integration test: public_repos returns expected_repos from fixtures."""
-        client = GithubOrgClient("google")
-        self.assertEqual(client.public_repos(), self.expected_repos)
+        """public_repos returns expected_repos from fixtures."""
+        c = GithubOrgClient("google")
+        self.assertEqual(c.public_repos(), self.expected_repos)
 
     def test_public_repos_with_license(self):
-        """Integration test: public_repos(license='apache-2.0') returns apache2_repos."""
-        client = GithubOrgClient("google")
-        self.assertEqual(
-            client.public_repos(license="apache-2.0"),
-            self.apache2_repos,
-        )
+        """Integration test: public_repos with license filter."""
+        c = GithubOrgClient("google")
+        result = c.public_repos(license="apache-2.0")
+        self.assertEqual(result, self.apache2_repos)
 
 
 if __name__ == "__main__":
