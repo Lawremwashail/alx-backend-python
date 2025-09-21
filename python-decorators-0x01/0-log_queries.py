@@ -5,7 +5,7 @@ import functools
 
 #decorator to log SQL queries
 def log_queries(func):
-    @functools.wrap(func)
+    @functools.wraps(func)
     def wrapper(*args, **kwargs):
         query = None
         if "query" in kwargs:
@@ -28,4 +28,4 @@ def fetch_all_users(query):
     conn.close()
     return results
 
-users = fetch_all_users(query="SELECT * FROM USERS")
+users = fetch_all_users(query="SELECT * FROM users")
