@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for client.GithubOrgClient."""
+"""Unit tests and integration tests for client.GithubOrgClient."""
 import unittest
 from unittest.mock import patch, PropertyMock, Mock
 from parameterized import parameterized, parameterized_class
@@ -79,7 +79,6 @@ class TestIntegrationGithubOrgClient(unittest.TestCase):
     def setUpClass(cls):
         """Start patcher for requests.get with side_effect."""
         cls.get_patcher = patch("requests.get")
-
         mock_get = cls.get_patcher.start()
 
         def side_effect(url):
