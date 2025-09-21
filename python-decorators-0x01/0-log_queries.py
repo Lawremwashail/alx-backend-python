@@ -19,6 +19,28 @@ def log_queries(func):
         return func(*args, **kwargs)
     return wrapper
 
+
+#create users table if does not exists
+def setup_db():
+    conn = sqlite3.connect("users.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    age INTEGER NOT NULL
+    )
+    """)
+
+    cursor.executemany(
+            "INSERT INTO users (name, age) VALUES (?, ?)",
+            [("Lawre", 24), ("Ambu", 22), ("Jose", 23)]
+        )
+    conn.commit()
+    conn.close()
+
+
 @log_queries
 def fetch_all_users(query):
     conn = sqlite3.connect('users.db')
@@ -28,4 +50,8 @@ def fetch_all_users(query):
     conn.close()
     return results
 
-users = fetch_all_users(query="SELECT * FROM users")
+
+if __name__ == "__main__":
+    setup_db()
+    users = fetch_all_users(query="SELECT * FROM users")
+    print(users)
