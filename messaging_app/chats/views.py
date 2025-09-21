@@ -1,17 +1,16 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, filters
 from rest_framework.response import Response
-from rest_framework.decorators import action
 from .models import Conversation, Message, User
 from .serializers import ConversationSerializer, MessageSerializer
-
-# Conversation ViewSet
 
 class ConversationViewSet(viewsets.ModelViewSet):
     queryset = Conversation.objects.all()
     serializer_class = ConversationSerializer
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = ['created_at']
+    ordering = ['-created_at']
 
     def create(self, request, *args, **kwargs):
-        # Expecting a list of participant IDs in the request
         participant_ids = request.data.get('participants', [])
         if not participant_ids or len(participant_ids) < 2:
             return Response(
@@ -23,16 +22,17 @@ class ConversationViewSet(viewsets.ModelViewSet):
         participants = User.objects.filter(user_id__in=participant_ids)
         conversation.participants.set(participants)
         conversation.save()
-
         serializer = self.get_serializer(conversation)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-# Message ViewSet
-
 class MessageViewSet(viewsets.ModelViewSet):
     queryset = Message.objects.all()
     serializer_class = MessageSerializer
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['conversation__conversation_id', 'sender__email']
+    ordering_fields = ['sent_at']
+    ordering = ['-sent_at']
 
     def create(self, request, *args, **kwargs):
         sender_id = request.data.get('sender')
@@ -61,4 +61,3 @@ class MessageViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(message)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-
