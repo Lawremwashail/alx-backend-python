@@ -70,3 +70,27 @@ class OffensiveLanguageMiddleware:
             return x_forwarded_for.split(",")[0].strip()
         return request.META.get("REMOTE_ADDR")
 
+
+
+class RolePermissionMiddleware:
+    """
+    Middleware to restrict access based on user role.
+    Only users with role 'admin' or 'moderator' can perform restricted actions.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        user = getattr(request, "user", None)
+
+        # Apply restriction only if user is authenticated
+        if user and user.is_authenticated:
+            # Check if restricted path
+            if request.path.startswith("/api/"):  
+                # If User model has a `role` attribute
+                if not hasattr(user, "role") or user.role not in ["admin", "moderator"]:
+                    return HttpResponseForbidden(" Access denied: You don’t have permission.")
+
+        return self.get_response(request)
+
