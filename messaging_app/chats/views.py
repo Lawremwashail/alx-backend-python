@@ -1,14 +1,24 @@
 from rest_framework import viewsets, status, filters
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+
 from .models import Conversation, Message, User
 from .serializers import ConversationSerializer, MessageSerializer
+from .permissions import IsParticipant
+
 
 class ConversationViewSet(viewsets.ModelViewSet):
-    queryset = Conversation.objects.all()
     serializer_class = ConversationSerializer
+    permission_classes = [IsAuthenticated, IsParticipant]
     filter_backends = [filters.OrderingFilter]
     ordering_fields = ['created_at']
     ordering = ['-created_at']
+
+    def get_queryset(self):
+        """
+        Only return conversations where the logged-in user is a participant
+        """
+        return Conversation.objects.filter(participants=self.request.user)
 
     def create(self, request, *args, **kwargs):
         participant_ids = request.data.get('participants', [])
@@ -17,7 +27,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
                 {"error": "A conversation requires at least 2 participants."},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         conversation = Conversation.objects.create()
         participants = User.objects.filter(user_id__in=participant_ids)
         conversation.participants.set(participants)
@@ -27,12 +37,18 @@ class ConversationViewSet(viewsets.ModelViewSet):
 
 
 class MessageViewSet(viewsets.ModelViewSet):
-    queryset = Message.objects.all()
     serializer_class = MessageSerializer
+    permission_classes = [IsAuthenticated, IsParticipant]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['conversation__conversation_id', 'sender__email']
     ordering_fields = ['sent_at']
     ordering = ['-sent_at']
+
+    def get_queryset(self):
+        """
+        Only return messages from conversations the logged-in user participates in
+        """
+        return Message.objects.filter(conversation__participants=self.request.user)
 
     def create(self, request, *args, **kwargs):
         sender_id = request.data.get('sender')
@@ -44,7 +60,7 @@ class MessageViewSet(viewsets.ModelViewSet):
                 {"error": "sender, conversation, and message_body are required."},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         try:
             sender = User.objects.get(user_id=sender_id)
             conversation = Conversation.objects.get(conversation_id=conversation_id)
@@ -52,6 +68,13 @@ class MessageViewSet(viewsets.ModelViewSet):
             return Response({"error": "Sender not found"}, status=status.HTTP_404_NOT_FOUND)
         except Conversation.DoesNotExist:
             return Response({"error": "Conversation not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Ensure the sender is part of the conversation
+        if sender not in conversation.participants.all():
+            return Response(
+                {"error": "Sender is not a participant of this conversation."},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
         message = Message.objects.create(
             sender=sender,
@@ -61,3 +84,4 @@ class MessageViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(message)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
