@@ -1,28 +1,27 @@
 from rest_framework import viewsets, status, filters
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-
 from .models import Conversation, Message, User
 from .serializers import ConversationSerializer, MessageSerializer
+from .pagination import MessagePagination
+from .filters import MessageFilter
 from .permissions import IsParticipantOfConversation
 
 
 class ConversationViewSet(viewsets.ModelViewSet):
+    queryset = Conversation.objects.all()
     serializer_class = ConversationSerializer
-    permission_classes = [IsAuthenticated, IsParticipantOfConversation]
     filter_backends = [filters.OrderingFilter]
-    ordering_fields = ['created_at']
-    ordering = ['-created_at']
-
-    def get_queryset(self):
-        return Conversation.objects.filter(participants=self.request.user)
+    ordering_fields = ["created_at"]
+    ordering = ["-created_at"]
+    permission_classes = [IsParticipantOfConversation]
 
     def create(self, request, *args, **kwargs):
-        participant_ids = request.data.get('participants', [])
+        participant_ids = request.data.get("participants", [])
         if not participant_ids or len(participant_ids) < 2:
             return Response(
                 {"error": "A conversation requires at least 2 participants."},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         conversation = Conversation.objects.create()
@@ -34,25 +33,25 @@ class ConversationViewSet(viewsets.ModelViewSet):
 
 
 class MessageViewSet(viewsets.ModelViewSet):
+    queryset = Message.objects.all()
     serializer_class = MessageSerializer
-    permission_classes = [IsAuthenticated, IsParticipantOfConversation]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['conversation__conversation_id', 'sender__email']
-    ordering_fields = ['sent_at']
-    ordering = ['-sent_at']
-
-    def get_queryset(self):
-        return Message.objects.filter(conversation__participants=self.request.user)
+    pagination_class = MessagePagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = MessageFilter
+    search_fields = ["conversation__conversation_id", "sender__email"]
+    ordering_fields = ["sent_at"]
+    ordering = ["-sent_at"]
+    permission_classes = [IsParticipantOfConversation]
 
     def create(self, request, *args, **kwargs):
-        sender_id = request.data.get('sender')
-        conversation_id = request.data.get('conversation')
-        message_body = request.data.get('message_body', '').strip()
+        sender_id = request.data.get("sender")
+        conversation_id = request.data.get("conversation")
+        message_body = request.data.get("message_body", "").strip()
 
         if not sender_id or not conversation_id or not message_body:
             return Response(
                 {"error": "sender, conversation, and message_body are required."},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
@@ -63,16 +62,10 @@ class MessageViewSet(viewsets.ModelViewSet):
         except Conversation.DoesNotExist:
             return Response({"error": "Conversation not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        if sender not in conversation.participants.all():
-            return Response(
-                {"error": "Sender is not a participant of this conversation."},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
         message = Message.objects.create(
             sender=sender,
             conversation=conversation,
-            message_body=message_body
+            message_body=message_body,
         )
 
         serializer = self.get_serializer(message)
