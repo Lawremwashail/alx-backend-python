@@ -72,7 +72,7 @@ class OffensiveLanguageMiddleware:
 
 
 
-class RolePermissionMiddleware:
+class RolepermissionMiddleware:
     """
     Middleware to restrict access based on user role.
     Only users with role 'admin' or 'moderator' can perform restricted actions.
