@@ -1,3 +1,14 @@
-from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import redirect
+from django.contrib.auth.models import User
 
-# Create your views here.
+
+@login_required
+def delete_user(request):
+    """
+    View that allows a logged-in user to delete their own account.
+    """
+    user = request.user
+    user.delete()
+    return redirect("login")  # redirect to login page after deletion
+
