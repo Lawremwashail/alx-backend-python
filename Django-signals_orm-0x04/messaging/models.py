@@ -1,18 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-
-
-class UnreadMessagesManager(models.Manager):
-    def for_user(self, user):
-        """
-        Returns unread messages for the given user.
-        Uses .only() to optimize DB query.
-        """
-        return (
-            self.filter(receiver=user, read=False)
-            .select_related("sender")  # optimize sender lookup
-            .only("id", "sender__username", "content", "timestamp", "read")
-        )
+from .managers import UnreadMessagesManager
 
 
 class Message(models.Model):
@@ -28,12 +16,12 @@ class Message(models.Model):
     )
     content = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
-    edited = models.BooleanField(default=False)
 
-    # New field for marking messages as read/unread
+    # read/unread flag required by the custom manager
     read = models.BooleanField(default=False)
 
-    # Self-referential FK for threaded conversations
+    # edited flag and parent_message for threaded replies
+    edited = models.BooleanField(default=False)
     parent_message = models.ForeignKey(
         "self",
         on_delete=models.CASCADE,
@@ -42,9 +30,9 @@ class Message(models.Model):
         related_name="replies"
     )
 
-    # Default and custom managers
-    objects = models.Manager()         # default manager
-    unread = UnreadMessagesManager()   # custom manager for unread messages
+    # managers
+    objects = models.Manager()           # default manager
+    unread = UnreadMessagesManager()     # custom manager for unread messages
 
     def __str__(self):
         return f"{self.sender.username} → {self.receiver.username}: {self.content[:30]}"
@@ -52,10 +40,11 @@ class Message(models.Model):
     def get_all_replies(self):
         """
         Recursive retrieval of all replies to this message.
-        Optimized with select_related and prefetch_related.
+        Uses select_related/prefetch_related on each step for efficiency.
         """
         replies = []
-        for reply in self.replies.all().select_related("sender", "receiver").prefetch_related("replies"):
+        qs = self.replies.all().select_related("sender", "receiver").prefetch_related("replies")
+        for reply in qs:
             replies.append(reply)
             replies.extend(reply.get_all_replies())
         return replies
