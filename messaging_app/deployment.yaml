@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: messaging-app
-          image: messaging_app:latest   # This must match your local image tag
+          image: messaging_app
           ports:
             - containerPort: 8000
 ---
