@@ -12,3 +12,5 @@ venv/
 *.log
 db_data/
 
+kubectl
+minikube-linux-amd64
