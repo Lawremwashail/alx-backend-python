@@ -14,3 +14,10 @@ db_data/
 
 kubectl
 minikube-linux-amd64
+
+.git
+.gitignore
+README.md
+
+Dockerfile
+.dockerignore
