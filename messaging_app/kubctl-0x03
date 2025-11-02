@@ -1,0 +1,18 @@
+#!/bin/bash
+# Rolling update script for the Django app
+
+echo "🚀 Applying updated deployment (v2.0)..."
+kubectl apply -f blue_deployment.yaml
+
+echo "📦 Checking rollout status..."
+kubectl rollout status deployment/messaging-app-blue
+
+echo"🌐 Testing application for downtime..."
+for i in {1..10}; do
+  curl -s http://localhost:8000/ > /dev/null && echo "Request $i: App is up" || echo "Request $i: App might be down"
+  sleep 2
+done
+
+echo "🧩 Current running pods:"
+kubectl get pods -l app=messaging-app
+
