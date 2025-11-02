@@ -1,0 +1,14 @@
+#!/bin/bash
+# Script to scale Django messaging app in Kubernetes
+
+echo "Scaling Django app deployment to 3 replicas..."
+kubectl scale deployment messaging-app-deployment --replicas=3
+
+echo "Verifying running pods..."
+kubectl get pods
+
+echo "Monitoring resource usage..."
+kubectl top pods
+
+echo "Running load test with wrk (requires port-forwarding)"
+echo "Use"
